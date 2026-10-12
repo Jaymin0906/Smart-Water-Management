@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Dashboard{% endblock %} - AquaPulse Smart Water Management</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  {% block extra_head %}{% endblock %}
+</head>
+<body>
+
+  {% if current_user %}
+  <!-- Mobile Sidebar Overlay Backdrop -->
+  <div class="sidebar-backdrop" id="sidebarBackdrop" aria-hidden="true"></div>
+
+  <!-- Navy Sidebar Navigation -->
+  <aside class="sidebar" id="sidebar" aria-label="Main Navigation">
+    <div class="sidebar-brand">
+      <div class="logo-icon" aria-hidden="true">💧</div>
+      <div class="brand-text">
+        <h1>Aqua<span>Pulse</span></h1>
+        <span class="brand-tag">v2.0 • Water Ops</span>
+      </div>
+    </div>
+
+    <ul class="sidebar-menu">
+      <li class="menu-category">Operational Console</li>
+      <li>
+        <a href="{{ url_for('dashboard') }}" class="{% if request.endpoint == 'dashboard' %}active{% endif %}">
+          <span class="icon">📊</span>
+          <span>Dashboard</span>
+        </a>
+      </li>
+      <li>
+        <a href="{{ url_for('monitor') }}" class="{% if request.endpoint == 'monitor' %}active{% endif %}">
+          <span class="icon">🚰</span>
+          <span>Tank Monitoring</span>
+        </a>
+      </li>
+      <li>
+        <a href="{{ url_for('history') }}" class="{% if request.endpoint == 'history' %}active{% endif %}">
+          <span class="icon">📈</span>
+          <span>Water History</span>
+        </a>
+      </li>
+      <li>
+        <a href="{{ url_for('prediction') }}" class="{% if request.endpoint == 'prediction' %}active{% endif %}">
+          <span class="icon">⏱️</span>
+          <span>Tank-Empty Prediction</span>
+        </a>
+      </li>
+
+      <li class="menu-category">Configuration &amp; Data</li>
+      <li>
+        <a href="{{ url_for('settings_page') }}" class="{% if request.endpoint == 'settings_page' %}active{% endif %}">
+          <span class="icon">⚙️</span>
+          <span>System Settings</span>
+        </a>
+      </li>
+      <li>
+        <a href="{{ url_for('export_csv') }}">
+          <span class="icon">📥</span>
+          <span>CSV Export</span>
+        </a>
+      </li>
+
+      <li class="menu-category">Session</li>
+      <li>
+        <a href="{{ url_for('logout') }}" class="logout-link">
+          <span class="icon">🚪</span>
+          <span>Logout</span>
+        </a>
+      </li>
+    </ul>
+
+    <div class="sidebar-footer">
+      <div class="user-badge">
+        <div class="user-avatar" title="{{ current_user['username'] }}">
+          {{ current_user['username'][0].upper() }}
+        </div>
+        <div class="user-info">
+          <div class="username">{{ current_user['username'] }}</div>
+          <div class="role">Authorized Operator</div>
+        </div>
+        <a href="{{ url_for('settings_page') }}" class="user-gear" title="Profile Settings">⚙️</a>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main Content Wrapper -->
+  <div class="main-wrapper">
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="mobile-toggle" id="mobileToggle" aria-label="Toggle navigation drawer">
+          <span class="bar-line"></span>
+          <span class="bar-line"></span>
+          <span class="bar-line"></span>
+        </button>
+
+        <div class="topbar-breadcrumb">
+          <span class="crumb-root">AquaPulse</span>
+          <span class="crumb-separator">/</span>
+          <span class="crumb-current">{% block nav_title %}Dashboard{% endblock %}</span>
+        </div>
+      </div>
+
+      <div class="topbar-right">
+        <div class="telemetry-badge-container">
+          <span class="simulated-pill">
+            <span class="pulse-dot"></span>
+            <span class="pill-text">SIMULATED TELEMETRY</span>
+          </span>
+        </div>
+
+        <a href="{{ url_for('export_csv') }}" class="btn btn-outline btn-sm topbar-export-btn" title="Download historical readings as CSV">
+          <span>⬇ Export CSV</span>
+        </a>
+
+        <div class="topbar-user-mini">
+          <div class="mini-avatar">{{ current_user['username'][0].upper() }}</div>
+        </div>
+      </div>
+    </header>
+
+    <main class="content-area">
+      <!-- Flash Messages / Toast Alerts -->
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          <div class="alerts-container">
+            {% for category, message in messages %}
+              <div class="alert alert-{{ category }}">
+                <span class="alert-icon">
+                  {% if category == 'success' %}✓
+                  {% elif category == 'danger' %}⚠
+                  {% elif category == 'warning' %}!
+                  {% else %}ℹ{% endif %}
+                </span>
+                <span class="alert-text">{{ message }}</span>
+                <button class="alert-close" aria-label="Dismiss alert">&times;</button>
+              </div>
+            {% endfor %}
+          </div>
+        {% endif %}
+      {% endwith %}
+
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+
+  {% else %}
+  <!-- Unauthenticated (Login / Signup) layout wrapper -->
+  <div class="auth-wrapper">
+    <div class="auth-ambient-glow"></div>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="auth-alerts-container">
+          {% for category, message in messages %}
+            <div class="alert alert-{{ category }}">
+              <span class="alert-icon">
+                {% if category == 'success' %}✓
+                {% elif category == 'danger' %}⚠
+                {% else %}ℹ{% endif %}
+              </span>
+              <span class="alert-text">{{ message }}</span>
+              <button class="alert-close" aria-label="Dismiss alert">&times;</button>
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+    {% block auth_content %}{% endblock %}
+  </div>
+  {% endif %}
+
+  <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+  {% block extra_scripts %}{% endblock %}
+</body>
+</html>

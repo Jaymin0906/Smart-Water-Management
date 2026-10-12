@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block title %}Create Account{% endblock %}
+
+{% block auth_content %}
+<div class="auth-card">
+  <div class="auth-brand">
+    <div class="brand-badge-ring">
+      <div class="brand-badge">💧</div>
+    </div>
+    <h2>AquaPulse</h2>
+    <p>Create your personal reservoir management account</p>
+  </div>
+
+  <form method="POST" action="{{ url_for('signup') }}" id="signupForm">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+    <div class="form-group">
+      <label class="form-label" for="username">Operator Username</label>
+      <div class="input-with-icon">
+        <span class="input-icon">👤</span>
+        <input type="text" id="username" name="username" class="form-control" placeholder="Minimum 3 characters" minlength="3" required autofocus autocomplete="username">
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="email">Email Address <span class="label-optional">(Optional)</span></label>
+      <div class="input-with-icon">
+        <span class="input-icon">✉️</span>
+        <input type="email" id="email" name="email" class="form-control" placeholder="operator@aquapulse.io" autocomplete="email">
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="password">Create Password</label>
+      <div class="input-with-icon">
+        <span class="input-icon">🔒</span>
+        <input type="password" id="password" name="password" class="form-control" placeholder="Minimum 6 characters" minlength="6" required autocomplete="new-password">
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="confirm_password">Confirm Password</label>
+      <div class="input-with-icon">
+        <span class="input-icon">🔐</span>
+        <input type="password" id="confirm_password" name="confirm_password" class="form-control" placeholder="Repeat your password" minlength="6" required autocomplete="new-password">
+      </div>
+    </div>
+
+    <button type="submit" class="btn btn-primary btn-auth">
+      <span>Register &amp; Launch Console</span>
+      <span class="btn-arrow">&rarr;</span>
+    </button>
+  </form>
+
+  <div class="auth-footer-link">
+    Already have an operator account? <a href="{{ url_for('login') }}">Sign in here</a>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+
+{% block title %}Water History & Analytics{% endblock %}
+{% block nav_title %}Water History{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h2 class="page-title">Water History &amp; Analytics</h2>
+    <p class="page-subtitle">Historical sensor readings, consumption trends, and downloadable CSV records</p>
+  </div>
+  <div style="display: flex; gap: 10px;">
+    <a href="{{ url_for('export_csv') }}" class="btn btn-primary btn-sm">
+      <span>📥 Download CSV ({{ total_count }} records)</span>
+    </a>
+  </div>
+</div>
+
+<!-- Chart.js Trend Visualizer Card -->
+<div class="card" style="margin-bottom: 24px;">
+  <div class="card-header">
+    <div>
+      <h3 class="card-title">Water Level &amp; Volume Trends</h3>
+      <p style="font-size: 0.82rem; margin: 0;">Time-series analysis of reservoir elevation</p>
+    </div>
+    <div style="display: flex; align-items: center; gap: 8px;">
+      <label for="chartLimitSelect" style="font-size: 0.82rem; font-weight: 600; color: #64748b;">Display Range:</label>
+      <select id="chartLimitSelect" class="form-control" style="width: auto; padding: 4px 10px; font-size: 0.82rem;">
+        <option value="10">Last 10 Readings</option>
+        <option value="20" selected>Last 20 Readings</option>
+        <option value="50">Last 50 Readings</option>
+      </select>
+    </div>
+  </div>
+
+  <div style="position: relative; height: 320px; width: 100%;">
+    <canvas id="waterHistoryChart"></canvas>
+  </div>
+</div>
+
+<!-- Historical Telemetry Table Card -->
+<div class="card">
+  <div class="card-header">
+    <h3 class="card-title">Recorded Telemetry Logs</h3>
+    <span class="badge badge-secondary">Showing latest {{ readings|length }} of {{ total_count }}</span>
+  </div>
+
+  <div class="table-responsive">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th># ID</th>
+          <th>Timestamp</th>
+          <th>Water Level (%)</th>
+          <th>Volume (Litres)</th>
+          <th>Pump Relay</th>
+          <th>Threshold Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in readings %}
+        <tr>
+          <td>#{{ r['id'] }}</td>
+          <td>{{ r['timestamp'] }}</td>
+          <td>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <strong>{{ r['level'] }}%</strong>
+              <div style="width: 60px; height: 6px; background: #e2e8f0; border-radius: 3px; overflow: hidden;">
+                <div style="width: {{ r['level'] }}%; height: 100%; background: #0284c7;"></div>
+              </div>
+            </div>
+          </td>
+          <td>{{ r['litres'] }} L</td>
+          <td>
+            <span class="badge {% if r['pump_state'] == 'ON' %}badge-success{% else %}badge-secondary{% endif %}">
+              {{ r['pump_state'] }}
+            </span>
+          </td>
+          <td>
+            {% if r['level'] >= settings['overflow_threshold'] %}
+              <span class="badge badge-danger">Overflow</span>
+            {% elif r['level'] <= settings['low_threshold'] %}
+              <span class="badge badge-warning">Low</span>
+            {% else %}
+              <span class="badge badge-success">Normal</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="6" style="text-align: center; color: #64748b; padding: 30px;">
+            No historical logs recorded. Simulate readings in Tank Monitoring to populate data.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{{ url_for('static', filename='js/history.js') }}"></script>
+{% endblock %}

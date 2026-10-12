@@ -1,0 +1,332 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard Overview{% endblock %}
+{% block nav_title %}Dashboard Overview{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h2 class="page-title">Dashboard Overview</h2>
+    <p class="page-subtitle">Real-time water telemetry, reservoir metrics &amp; automated pump controls</p>
+  </div>
+  <div class="header-actions">
+    <span class="badge badge-{{ status_class }} status-pill-glow">
+      <span class="badge-dot"></span>
+      {{ status_text }}
+    </span>
+  </div>
+</div>
+
+<!-- Modern Stat Cards Grid -->
+<div class="grid-cards">
+  <!-- Card 1: Water Level -->
+  <div class="card stat-card">
+    <div class="stat-card-top">
+      <span class="stat-label">Current Water Level</span>
+      <div class="stat-icon blue">💧</div>
+    </div>
+    <div class="stat-value">{{ level }}%</div>
+    <div class="stat-progress-bar">
+      <div class="stat-progress-fill {% if status_class == 'danger' %}danger-fill{% elif status_class == 'warning' %}warning-fill{% endif %}" style="width: {{ level }}%;"></div>
+    </div>
+    <div class="stat-meta">
+      <strong>{{ litres }}</strong> of {{ capacity }} Litres capacity
+    </div>
+  </div>
+
+  <!-- Card 2: Tank Status -->
+  <div class="card stat-card">
+    <div class="stat-card-top">
+      <span class="stat-label">Reservoir Status</span>
+      <div class="stat-icon {% if status_class == 'danger' %}red{% elif status_class == 'warning' %}amber{% else %}green{% endif %}">🛡️</div>
+    </div>
+    <div class="stat-value status-heading" style="color: {{ status_color }};">
+      {{ status_text }}
+    </div>
+    <div class="stat-meta threshold-summary">
+      <span>Low: <strong>{{ settings['low_threshold'] }}%</strong></span>
+      <span>•</span>
+      <span>High: <strong>{{ settings['high_threshold'] }}%</strong></span>
+      <span>•</span>
+      <span>Max: <strong>{{ settings['overflow_threshold'] }}%</strong></span>
+    </div>
+  </div>
+
+  <!-- Card 3: Water Pump -->
+  <div class="card stat-card">
+    <div class="stat-card-top">
+      <span class="stat-label">Pump Relay State</span>
+      <div class="stat-icon {% if pump_state == 'ON' %}green-glow{% else %}slate{% endif %}">⚡</div>
+    </div>
+    <div class="stat-value pump-status-display">
+      <span class="pump-state-text">{{ pump_state }}</span>
+      <span class="pump-led {% if pump_state == 'ON' %}led-active{% else %}led-inactive{% endif %}"></span>
+    </div>
+    <div class="stat-meta">
+      Control Mode: <strong class="badge badge-secondary mode-pill">{{ pump_mode }}</strong>
+    </div>
+  </div>
+
+  <!-- Card 4: Empty Prediction -->
+  <div class="card stat-card">
+    <div class="stat-card-top">
+      <span class="stat-label">Estimated Depletion</span>
+      <div class="stat-icon cyan">⏱️</div>
+    </div>
+    <div class="stat-value prediction-val">
+      {% if prediction.available %}
+        {{ prediction.formatted_time }}
+      {% else %}
+        <span class="trend-unavailable">{{ prediction.trend }}</span>
+      {% endif %}
+    </div>
+    <div class="stat-meta">
+      {% if prediction.available %}
+        Discharge rate: <strong>{{ prediction.rate_litres_per_hour }} L/hr</strong>
+      {% else %}
+        {{ prediction.message }}
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- Center Visualizer & Control Matrix -->
+<div class="dashboard-matrix">
+  <!-- Tank Graphic Card -->
+  <div class="card tank-visual-card">
+    <div class="card-header">
+      <div>
+        <h3 class="card-title">Live Reservoir Visualizer</h3>
+        <span class="card-sub">Dynamic wave oscillation &amp; capacity elevation</span>
+      </div>
+      <span class="badge badge-info">Simulated Tank</span>
+    </div>
+
+    <div class="tank-visual-wrapper">
+      <!-- Metallic Top Cap -->
+      <div class="tank-cap"></div>
+
+      <!-- Main Acrylic Cylinder Tank -->
+      <div class="tank-container">
+        <!-- Ruler Graduations -->
+        <div class="tank-ruler">
+          <div class="tick"><span class="tick-line"></span> 100%</div>
+          <div class="tick"><span class="tick-line"></span> 75%</div>
+          <div class="tick"><span class="tick-line"></span> 50%</div>
+          <div class="tick"><span class="tick-line"></span> 25%</div>
+          <div class="tick"><span class="tick-line"></span> 0%</div>
+        </div>
+
+        <!-- Center Glass HUD Readout -->
+        <div class="tank-center-badge">
+          <div class="percentage">{{ level }}%</div>
+          <div class="sub-vol">{{ litres }} L</div>
+        </div>
+
+        <!-- Liquid Body with Animated Wave Effect -->
+        <div class="water-fill" id="waterFill" data-level="{{ level }}" data-low="{{ settings['low_threshold'] }}" data-overflow="{{ settings['overflow_threshold'] }}">
+          <div class="wave-container">
+            <div class="wave wave1"></div>
+            <div class="wave wave2"></div>
+          </div>
+          <!-- Animated Rising Bubbles -->
+          <div class="bubble-layer">
+            <span class="bubble b1"></span>
+            <span class="bubble b2"></span>
+            <span class="bubble b3"></span>
+            <span class="bubble b4"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Heavy Base Mount -->
+      <div class="tank-base"></div>
+    </div>
+
+    <div class="tank-legend">
+      <span class="legend-item"><span class="legend-dot normal"></span> Normal (&lt;{{ settings['high_threshold'] }}%)</span>
+      <span class="legend-item"><span class="legend-dot warning"></span> Low (&le;{{ settings['low_threshold'] }}%)</span>
+      <span class="legend-item"><span class="legend-dot danger"></span> Overflow (&ge;{{ settings['overflow_threshold'] }}%)</span>
+    </div>
+  </div>
+
+  <!-- Quick Pump & Automation Controls -->
+  <div class="card control-card">
+    <div class="card-header">
+      <div>
+        <h3 class="card-title">Pump &amp; Automation Hub</h3>
+        <span class="card-sub">Simulated relay actuation &amp; threshold rules</span>
+      </div>
+      <span class="badge {% if pump_state == 'ON' %}badge-success{% else %}badge-secondary{% endif %}">
+        Relay {{ pump_state }}
+      </span>
+    </div>
+
+    <div class="control-panel-body">
+      <!-- Overflow & Level Alarm Banner (if level >= overflow_threshold or <= low_threshold) -->
+      {% if level >= settings['overflow_threshold'] %}
+      <div class="alarm-alert-banner alarm-danger" id="overflowAlarmBanner">
+        <div class="alarm-icon-pulse">🚨</div>
+        <div class="alarm-content">
+          <div class="alarm-title">CRITICAL ALARM: TANK OVERFLOW DETECTED!</div>
+          <div class="alarm-desc">Water level is at <strong>{{ level }}%</strong>, exceeding the calibrated limit of <strong>{{ settings['overflow_threshold'] }}%</strong>! Immediate shut-off required.</div>
+        </div>
+        <div class="alarm-actions">
+          <button type="button" class="btn btn-danger btn-sm" id="muteAlarmBtn">🔕 Mute Buzzer</button>
+        </div>
+      </div>
+      {% elif level <= settings['low_threshold'] %}
+      <div class="alarm-alert-banner alarm-warning" id="lowAlarmBanner">
+        <div class="alarm-icon-pulse">⚠️</div>
+        <div class="alarm-content">
+          <div class="alarm-title">LOW WATER LEVEL ALARM</div>
+          <div class="alarm-desc">Water level is at <strong>{{ level }}%</strong>, falling below the minimum threshold of <strong>{{ settings['low_threshold'] }}%</strong>.</div>
+        </div>
+        <div class="alarm-actions">
+          <button type="button" class="btn btn-warning btn-sm" id="muteAlarmBtn">🔕 Mute Alert</button>
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Quick Level Simulation & Alarm Testing Slider directly on Dashboard -->
+      <div class="panel-section" style="background: #f8fafc; border: 1px solid var(--border-light); border-radius: var(--radius-sm); padding: 14px; margin-bottom: 16px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+          <label class="section-label" style="margin: 0; color: var(--navy-dark); font-weight: 700;">
+            ⚡ Quick Sensor Slider (Test Level &amp; Alarms)
+          </label>
+          <a href="{{ url_for('settings_page') }}" style="font-size: 0.78rem; font-weight: 600;" title="Edit Alarm Thresholds">
+            ⚙️ Edit Limits
+          </a>
+        </div>
+        <form action="{{ url_for('update_level') }}" method="POST" id="quickLevelForm">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="redirect_to" value="dashboard">
+          <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
+            <input type="range" name="level" id="quickLevelSlider" min="0" max="100" step="1" value="{{ level }}" class="form-range" oninput="document.getElementById('quickLevelVal').innerText = this.value + '%'">
+            <span id="quickLevelVal" style="font-weight: 800; font-size: 1.1rem; min-width: 50px; text-align: right; color: var(--primary);">{{ level }}%</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; gap: 6px; flex-wrap: wrap;">
+            <div style="display: flex; gap: 6px;">
+              <button type="button" class="btn btn-outline btn-sm" onclick="setAndSubmitLevel({{ settings['low_threshold'] }})" title="Test Low Water Alarm">Low ({{ settings['low_threshold'] }}%)</button>
+              <button type="button" class="btn btn-outline btn-sm" onclick="setAndSubmitLevel(50)">50%</button>
+              <button type="button" class="btn btn-outline btn-sm" onclick="setAndSubmitLevel({{ settings['high_threshold'] }})">High ({{ settings['high_threshold'] }}%)</button>
+              <button type="button" class="btn btn-danger btn-sm" onclick="setAndSubmitLevel({{ settings['overflow_threshold'] }})" title="Trigger Overflow Alarm">🚨 Overflow ({{ settings['overflow_threshold'] }}%)</button>
+            </div>
+            <button type="submit" class="btn btn-primary btn-sm">Update Level</button>
+          </div>
+        </form>
+      </div>
+
+      <div class="panel-section">
+        <label class="section-label">Manual Relay Override</label>
+        <form action="{{ url_for('pump_control') }}" method="POST" class="pump-btn-group">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="redirect_to" value="dashboard">
+          <button type="submit" name="command" value="on" class="btn btn-success btn-pump" {% if pump_state == 'ON' %}disabled title="Pump is already operating"{% endif %}>
+            ▶ Start Pump
+          </button>
+          <button type="submit" name="command" value="off" class="btn btn-danger btn-pump" {% if pump_state == 'OFF' %}disabled title="Pump is already halted"{% endif %}>
+            ⏹ Stop Pump
+          </button>
+        </form>
+      </div>
+
+      <div class="panel-section">
+        <div class="section-split">
+          <div>
+            <label class="section-label">Automation Mode</label>
+            <p class="section-desc">Auto replenishes below {{ settings['low_threshold'] }}% and halts at {{ settings['high_threshold'] }}%</p>
+          </div>
+          <form action="{{ url_for('change_mode') }}" method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="redirect_to" value="dashboard">
+            <select name="mode" class="form-control select-mode" onchange="this.form.submit()">
+              <option value="Manual" {% if pump_mode == 'Manual' %}selected{% endif %}>Manual Mode</option>
+              <option value="Auto" {% if pump_mode == 'Auto' %}selected{% endif %}>Auto Mode</option>
+            </select>
+          </form>
+        </div>
+      </div>
+
+      <!-- Hardware Simulation Notice -->
+      <div class="simulation-alert-box">
+        <div class="sim-box-title">
+          <span class="pulse-dot"></span>
+          <span>Simulated Edge Actuator</span>
+        </div>
+        <p class="sim-box-text">
+          Relay commands trigger simulated hardware signals in software. When ready, bind physical ESP32 or MQTT brokers in system settings.
+        </p>
+        <a href="{{ url_for('monitor') }}" class="btn btn-primary btn-sm sim-box-btn">
+          Go to Sensor Calibration &amp; Simulation &rarr;
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Recent Telemetry Log Card -->
+<div class="card recent-logs-card">
+  <div class="card-header">
+    <div>
+      <h3 class="card-title">Recent Telemetry Readings</h3>
+      <span class="card-sub">Displaying latest sensor data entries</span>
+    </div>
+    <a href="{{ url_for('history') }}" class="btn btn-outline btn-sm">View Full History ({{ total_readings_count }})</a>
+  </div>
+
+  <div class="table-responsive">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Timestamp</th>
+          <th>Level (%)</th>
+          <th>Quantity (Litres)</th>
+          <th>Pump State</th>
+          <th>Classification</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in readings %}
+        <tr>
+          <td>{{ r['timestamp'] }}</td>
+          <td>
+            <div class="table-level-cell">
+              <strong>{{ r['level'] }}%</strong>
+              <div class="mini-bar-bg">
+                <div class="mini-bar-fill" style="width: {{ r['level'] }}%;"></div>
+              </div>
+            </div>
+          </td>
+          <td>{{ r['litres'] }} L</td>
+          <td>
+            <span class="badge {% if r['pump_state'] == 'ON' %}badge-success{% else %}badge-secondary{% endif %}">
+              {{ r['pump_state'] }}
+            </span>
+          </td>
+          <td>
+            {% if r['level'] >= settings['overflow_threshold'] %}
+              <span class="badge badge-danger">Overflow</span>
+            {% elif r['level'] <= settings['low_threshold'] %}
+              <span class="badge badge-warning">Low</span>
+            {% else %}
+              <span class="badge badge-success">Normal</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="5" class="empty-table-msg">
+            No readings recorded yet.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+{% endblock %}

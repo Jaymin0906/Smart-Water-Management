@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+
+{% block title %}Tank-Empty Prediction{% endblock %}
+{% block nav_title %}Tank-Empty Prediction{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h2 class="page-title">Tank-Empty Prediction</h2>
+    <p class="page-subtitle">Deterministic time-to-empty forecast based on recent consumption rates and time-separated readings</p>
+  </div>
+  <div>
+    <span class="badge {% if prediction.available %}badge-info{% else %}badge-secondary{% endif %}" style="font-size: 0.9rem; padding: 6px 14px;">
+      Status: {{ prediction.trend }}
+    </span>
+  </div>
+</div>
+
+<!-- Primary Prediction Highlights -->
+<div class="grid-cards">
+  <!-- Card 1: Time Remaining -->
+  <div class="card stat-card">
+    <div class="stat-icon cyan">⏱️</div>
+    <span class="stat-label">Estimated Depletion Time</span>
+    <div class="stat-value" style="color: var(--primary);">
+      {% if prediction.available %}
+        {{ prediction.formatted_time }}
+      {% else %}
+        <span style="font-size: 1.3rem; color: #64748b;">N/A</span>
+      {% endif %}
+    </div>
+    <div class="stat-meta">
+      {% if prediction.available %}
+        {{ prediction.hours_remaining }} decimal hours remaining
+      {% else %}
+        {{ prediction.message }}
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Card 2: Projected Date -->
+  <div class="card stat-card">
+    <div class="stat-icon blue">📅</div>
+    <span class="stat-label">Projected Empty Date &amp; Time</span>
+    <div class="stat-value" style="font-size: 1.35rem;">
+      {% if prediction.available and prediction.projected_empty_date %}
+        {{ prediction.projected_empty_date }}
+      {% else %}
+        <span style="font-size: 1.2rem; color: #64748b;">Awaiting Drain Trend</span>
+      {% endif %}
+    </div>
+    <div class="stat-meta">
+      Based on ongoing discharge velocity
+    </div>
+  </div>
+
+  <!-- Card 3: Consumption Rate -->
+  <div class="card stat-card">
+    <div class="stat-icon amber">📉</div>
+    <span class="stat-label">Observed Drain Rate</span>
+    <div class="stat-value" style="font-size: 1.5rem;">
+      {% if prediction.available %}
+        {{ prediction.rate_litres_per_hour }} <span style="font-size: 0.9rem; font-weight: 600;">L/hr</span>
+      {% else %}
+        {{ prediction.rate_percent_per_hour }}% / hr
+      {% endif %}
+    </div>
+    <div class="stat-meta">
+      {{ prediction.rate_percent_per_hour }}% capacity consumed per hour
+    </div>
+  </div>
+
+  <!-- Card 4: Current Water Volume -->
+  <div class="card stat-card">
+    <div class="stat-icon green">💧</div>
+    <span class="stat-label">Current Water Volume</span>
+    <div class="stat-value" style="font-size: 1.5rem;">
+      {{ (capacity * (level / 100))|round(1) }} L
+    </div>
+    <div class="stat-meta">
+      {{ level }}% of total {{ capacity }} Litres capacity
+    </div>
+  </div>
+</div>
+
+<!-- Prediction Methodology & Explanation -->
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; margin-bottom: 24px;">
+  <div class="card">
+    <div class="card-header">
+      <h3 class="card-title">Prediction Logic &amp; Mathematical Model</h3>
+      <span class="badge badge-info">Deterministic Rate Model</span>
+    </div>
+
+    <p style="font-size: 0.88rem; line-height: 1.6; margin-bottom: 14px;">
+      AquaPulse calculates tank-empty estimates using historical telemetry pairs. The engine analyzes valid consecutive readings separated by a minimum threshold of time:
+    </p>
+
+    <div style="background: #f8fafc; border-left: 3px solid #0284c7; padding: 12px 16px; border-radius: 4px; font-family: monospace; font-size: 0.85rem; margin-bottom: 14px; color: #0f172a;">
+      Consumption Rate (R) = &Delta; Level / &Delta; Time (hours)<br>
+      Time to Empty (T) = Current Level / R<br>
+      Projected Empty Timestamp = Now + T
+    </div>
+
+    <p style="font-size: 0.84rem; color: #64748b; margin: 0;">
+      <strong>Note:</strong> If the pump is actively refilling the tank or water is static, the system safely suppresses depletion alerts to prevent erroneous negative values or division by zero.
+    </p>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <h3 class="card-title">Telemetry Baseline Rows</h3>
+      <span class="badge badge-secondary">Recent Samples</span>
+    </div>
+
+    <div class="table-responsive">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Timestamp</th>
+            <th>Level (%)</th>
+            <th>Pump</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in recent_readings[:5] %}
+          <tr>
+            <td>{{ r['timestamp'] }}</td>
+            <td><strong>{{ r['level'] }}%</strong></td>
+            <td>
+              <span class="badge {% if r['pump_state'] == 'ON' %}badge-success{% else %}badge-secondary{% endif %}">
+                {{ r['pump_state'] }}
+              </span>
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="3" style="text-align: center; color: #64748b;">No recent readings available.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

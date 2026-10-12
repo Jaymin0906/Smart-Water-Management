@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+
+{% block title %}System Settings{% endblock %}
+{% block nav_title %}System Settings{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h2 class="page-title">System Settings &amp; Hardware Calibration</h2>
+    <p class="page-subtitle">Configure reservoir metrics, alert triggers, automation rules, and security preferences</p>
+  </div>
+</div>
+
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 24px;">
+  <!-- Reservoir & Thresholds Form -->
+  <div class="card">
+    <div class="card-header">
+      <h3 class="card-title">Tank Capacity &amp; Threshold Rules</h3>
+      <span class="badge badge-info">Calibration</span>
+    </div>
+
+    <form method="POST" action="{{ url_for('settings_page') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="action" value="thresholds">
+
+      <div class="form-group">
+        <label class="form-label" for="capacity">Total Tank Capacity (Litres)</label>
+        <input type="number" step="10" min="10" id="capacity" name="capacity" class="form-control" value="{{ settings['tank_capacity'] }}" required>
+        <small style="color: #64748b; font-size: 0.78rem;">Used to compute absolute volume from percentage readings.</small>
+      </div>
+
+      <div class="threshold-inputs-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 18px;">
+        <div>
+          <label class="form-label" for="low_threshold">Low Level (%)</label>
+          <input type="number" step="1" min="1" max="98" id="low_threshold" name="low_threshold" class="form-control" value="{{ settings['low_threshold'] }}" required>
+          <small style="color: #d97706; font-size: 0.72rem;">Auto-pump starts</small>
+        </div>
+
+        <div>
+          <label class="form-label" for="high_threshold">High Level (%)</label>
+          <input type="number" step="1" min="2" max="99" id="high_threshold" name="high_threshold" class="form-control" value="{{ settings['high_threshold'] }}" required>
+          <small style="color: #0284c7; font-size: 0.72rem;">Auto-pump stops</small>
+        </div>
+
+        <div>
+          <label class="form-label" for="overflow_threshold">Overflow (%)</label>
+          <input type="number" step="1" min="3" max="100" id="overflow_threshold" name="overflow_threshold" class="form-control" value="{{ settings['overflow_threshold'] }}" required>
+          <small style="color: #ef4444; font-size: 0.72rem;">Critical alarm</small>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="pump_mode">Default Pump Operating Mode</label>
+        <select id="pump_mode" name="pump_mode" class="form-control">
+          <option value="Manual" {% if settings['pump_mode'] == 'Manual' %}selected{% endif %}>Manual (Relay actuated only via user commands)</option>
+          <option value="Auto" {% if settings['pump_mode'] == 'Auto' %}selected{% endif %}>Auto (Smart automatic replenishment)</option>
+        </select>
+      </div>
+
+      <div style="background: #f8fafc; border-radius: var(--radius-sm); padding: 12px; margin-bottom: 18px; font-size: 0.8rem; color: #475569;">
+        <strong>Validation Rule:</strong> Ensure that <code>Low ({{ settings['low_threshold'] }}%) &lt; High ({{ settings['high_threshold'] }}%) &lt; Overflow ({{ settings['overflow_threshold'] }}%)</code> to preserve automation hysteresis.
+      </div>
+
+      <button type="submit" class="btn btn-primary" style="width: 100%;">
+        Save Threshold Configurations
+      </button>
+    </form>
+  </div>
+
+  <!-- User Account & Security Form -->
+  <div class="card">
+    <div class="card-header">
+      <h3 class="card-title">Operator Profile &amp; Security</h3>
+      <span class="badge badge-secondary">Account</span>
+    </div>
+
+    <form method="POST" action="{{ url_for('settings_page') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="action" value="profile">
+
+      <div class="form-group">
+        <label class="form-label">Operator Username</label>
+        <input type="text" class="form-control" value="{{ current_user['username'] }}" disabled style="background: #f1f5f9;">
+        <small style="color: #64748b; font-size: 0.78rem;">User IDs isolate all telemetry data and thresholds.</small>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="email">Alert Email Address</label>
+        <input type="email" id="email" name="email" class="form-control" value="{{ current_user['email'] or '' }}" placeholder="operator@aquapulse.io">
+      </div>
+
+      <div style="border-top: 1px solid var(--border-light); padding-top: 14px; margin-top: 16px;">
+        <span style="font-size: 0.84rem; font-weight: 700; color: var(--navy-dark); display: block; margin-bottom: 10px;">
+          Update Password (Optional)
+        </span>
+
+        <div class="form-group">
+          <label class="form-label" for="current_password">Current Password</label>
+          <input type="password" id="current_password" name="current_password" class="form-control" placeholder="••••••••">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="new_password">New Password</label>
+          <input type="password" id="new_password" name="new_password" class="form-control" placeholder="Minimum 6 characters">
+        </div>
+      </div>
+
+      <button type="submit" class="btn btn-outline" style="width: 100%;">
+        Update Profile &amp; Security
+      </button>
+    </form>
+  </div>
+</div>
+{% endblock %}

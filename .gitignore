@@ -1,0 +1,22 @@
+# Python bytecode & cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+
+# Environments
+venv/
+env/
+ENV/
+.env
+
+# Instance SQLite databases (isolated local test data)
+instance/*.db
+water.db
+
+# Operating System & IDE junk
+.DS_Store
+Thumbs.db
+*.log
+.vscode/settings.json
